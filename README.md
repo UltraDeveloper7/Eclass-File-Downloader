@@ -26,10 +26,24 @@ Before using the Greek University Course Scraper, ensure that you meet the follo
 ## Installation
 Follow these steps to use the Greek University Course Scraper:
 ## Download through Git:
-1. Clone the repository to your local machine using Git. Open your terminal and run the following command:
+1. **Open a Terminal or Command Prompt:**
+   - On Windows, you can use the Command Prompt or PowerShell.
+   - On macOS or Linux, use the Terminal.
+
+2. **Navigate to the Directory Where You Want to Clone the Repository:**
+   ```bash
+   cd path/to/your/directory
+   ```
+3. **Clone the Repository:**
    ```bash
    git clone https://github.com/UltraDeveloper7/Eclass-File-Downloader.git
    ```
+4. **Navigate into the Cloned Directory:**
+   ```bash
+   cd Eclass-File-Downloader
+   ```
+Now, you have successfully cloned the repository to your local machine. You can proceed with the next steps, such as installing dependencies and running the application.
+
 ## Download through ZIP file:
 1. Download the project as a zip file. You can do this by clicking on the "Code" button on the [GitHub repository page](https://github.com/UltraDeveloper7/Eclass-File-Downloader) and selecting "Download ZIP."
 2. Extract the downloaded zip file to a location of your choice.
