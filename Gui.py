@@ -1,24 +1,12 @@
-import sys
-import subprocess
 import time
-import tkinter as tk
-import requests
-
-subprocess.check_call([sys.executable, "-m", "pip", "install", "customtkinter"])
-subprocess.check_call([sys.executable, "-m", "pip", "install", "selenium"])
-subprocess.check_call([sys.executable, "-m", "pip", "install", "webdriver_manager"])
-subprocess.check_call([sys.executable, "-m", "pip", "install", "ChromeDriverManager"])
-subprocess.check_call([sys.executable, "-m", "pip", "install", "bs4"])
-
 import customtkinter as ctk
 from tkinter import messagebox
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service as ChromeService
 from selenium.webdriver.common.by import By
-from webdriver_manager.chrome import ChromeDriverManager
+from selenium.webdriver.edge.service import Service
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from selenium.common.exceptions import WebDriverException, NoSuchElementException
-from bs4 import BeautifulSoup
-
+from Subject import App
 
 
 universities = {
@@ -44,18 +32,20 @@ class EclassAllFileDownloader(ctk.CTk):
 
     def __init__(self):
         super().__init__()
-        self.selected_university = None
-        self.iconbitmap("images/logo.ico")
-        self.title("Eclass All File Downloader")
-        self.geometry(
+        self.selected_university = universities["University of Patras"]
+        self.clear_inputs = None
+        self.root = ctk.CTk()
+        self.root.iconbitmap("images/logo.ico")
+        self.root.title("Eclass All File Downloader")
+        self.root.geometry(
             f"{EclassAllFileDownloader.WIDTH}x{EclassAllFileDownloader.HEIGHT}+800+300")
-        self.resizable(False,False)
-        
-        self.myFrame = ctk.CTkFrame(master=self)
+        self.root.resizable(False,False)
+
+        self.myFrame = ctk.CTkFrame(master=self.root)
         self.myFrame.grid(row=0, column=0, sticky="nsew")
         # Configure the grid to expand the frame
-        self.grid_rowconfigure(0, weight=1)
-        self.grid_columnconfigure(0, weight=1)
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
         self.eclassLabel = ctk.CTkLabel(master=self.myFrame, text='URL:')
         self.eclass_url = ctk.CTkOptionMenu(master=self.myFrame,
@@ -65,22 +55,22 @@ class EclassAllFileDownloader(ctk.CTk):
         self.eclass_url.set("University of Patras")
 
         self.subjectLabel = ctk.CTkLabel(master=self.myFrame, text='Subject:')
-        self.subjectInput = ctk.CTkEntry(master=self.myFrame, width=200)
+        self.subjectInput = ctk.CTkEntry(master=self.myFrame, width=200, placeholder_text="Type in the subject:")
         self.subjectInput.bind("<Return>", lambda event: self.usernameInput.focus_set())
         self.subjectLabel.grid(row=3, column=0)
         self.subjectInput.grid(row=3, column=1, pady=10)
 
         self.usernameLabel = ctk.CTkLabel(master=self.myFrame, text='Username:')
-        self.usernameInput = ctk.CTkEntry(master=self.myFrame, width=200)
+        self.usernameInput = ctk.CTkEntry(master=self.myFrame, width=200, placeholder_text="Enter your username:")
         self.usernameInput.bind(
             "<Return>", lambda event: self.passwordInput.focus_set())
         self.usernameLabel.grid(row=6, column=0)
         self.usernameInput.grid(row=6, column=1, pady=10)
 
         self.passwordLabel = ctk.CTkLabel(master=self.myFrame, text='Password:')
-        self.passwordInput = ctk.CTkEntry(master=self.myFrame, width=200, show='*')
+        self.passwordInput = ctk.CTkEntry(master=self.myFrame, width=200, placeholder_text="Enter your password:", show='*')
         self.passwordInput.bind("<Return>", 
-                                lambda event: self.download_all_files_eclass())
+                                lambda event: self.download_all_files())
         self.passwordLabel.grid(row=8, column=0)
         self.passwordInput.grid(row=8, column=1, pady=10)
 
@@ -90,7 +80,7 @@ class EclassAllFileDownloader(ctk.CTk):
 
         self.myButton = ctk.CTkButton(
             master=self.myFrame, 
-            text="Initialize Process", command=lambda: self.download_all_files_eclass())
+            text="Initialize Process", command=lambda: self.download_all_files())
         self.myButton.grid(row=10, column=0, pady=20, columnspan=2)
         
         self.label_mode = ctk.CTkLabel(master=self.myFrame, text="Appearance Mode:")
@@ -102,9 +92,10 @@ class EclassAllFileDownloader(ctk.CTk):
         self.optionmenu_1.set("System")
         
         self.myFrame.bind("<Return>", 
-            lambda event: self.download_all_files_eclass())
+            lambda event: self.download_all_files())
 
-        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        self.root.bind("<Command-q>", self.on_closing)
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         
         self.var = 0
         
@@ -116,106 +107,134 @@ class EclassAllFileDownloader(ctk.CTk):
             self.passwordInput.configure(show="*")
             
     def get_url(self, selected_university):
-        self.selected_university = self.eclass_url.get()
-        return universities[selected_university]
+        self.selected_university = universities[selected_university]
+        return self.selected_university
         
-    
     def change_appearance_mode(self, new_appearance_mode):
         ctk.set_appearance_mode(new_appearance_mode)
 
-    def on_closing(self, event=0):
-        self.destroy()
+    def start(self, event=None):
+        self.root.mainloop()
 
-    def download_all_files_eclass(self):
+    def on_closing(self, event=0):
+        self.root.destroy()
+
+    def get_credentials(self):
         subject = self.subjectInput.get().strip()
         username = self.usernameInput.get().replace(" ", "")
         password = self.passwordInput.get().replace(" ", "")
+        return subject, username, password
 
+    def initialize_and_login(self, username, password, selected_university):
+        # Initialize the webdriver
         try:
-            one_before_latest_version = get_one_before_latest_chromedriver_version()
-            driver = webdriver.Chrome(ChromeDriverManager(one_before_latest_version).install())
+            driver = webdriver.Edge(service=Service(EdgeChromiumDriverManager().install()))
         except WebDriverException as e:
             print(f"Error initializing WebDriver: {e}")
             return
 
+        # Login
         try:
-            driver.get(self.selected_university)
+            driver.get(selected_university)
         except WebDriverException as e:
             print(f"Error navigating to URL: {e}")
             return 
         driver.implicitly_wait(0.5)
 
-        scraped_element_action(driver,
-            "xpath", '//*[@id="main-content"]/div/div/div[2]/div/div/div/div/div/div[1]/div[1]/a', "click")
+        scraped_element_action(driver, "xpath", '//*[@id="main-content"]/div/div/div[2]/div/div/div/div/div/div[1]/div[1]/a', "click")
+        scraped_element_action(driver, "name", "j_username", "sendkeys", username)
+        scraped_element_action(driver, "name", "j_password", "sendkeys", password)
+        scraped_element_action(driver, "xpath", '//*[@id="loginButton"]', "click")
 
-        scraped_element_action(
-            driver, "name", "j_username", "sendkeys", username)
+        return driver
 
-        scraped_element_action(
-            driver, "name", "j_password", "sendkeys", password)
+    def disconnect_from_eclass(self, driver):
+        scraped_element_action(driver, "xpath", '//*[@id="dropdownMenu1"]', "click")
+        scraped_element_action(driver, "xpath", '//*[@id="profile_menu_dropdown"]/ul/li[9]', "click")
 
-        scraped_element_action(
-            driver, "xpath", '//*[@id="loginButton"]', "click")
 
+    def clear_input_fields(self, subjectInput, usernameInput, passwordInput):
+        subjectInput.delete(0, ctk.END)
+        usernameInput.delete(0, ctk.END)
+        passwordInput.delete(0, ctk.END)
+
+    def fetch_subjects(self, username, password):
+        driver = self.initialize_and_login(username, password, self.selected_university)
+        if driver is None:
+            return
+        
+        # Navigate to the "Όλα τα μαθήματα" section
+        scraped_element_action(driver, "link_text", "Όλα τα μαθήματα", "click")
+
+        # Scrape all the subject names
+        subjects = [element.text for element in driver.find_elements(By.XPATH, '//table/tbody/tr/td[1]/strong/a')]
+
+        # Disconnect from eclass
+        self.disconnect_from_eclass(driver)
+
+        driver.quit()
+
+        return subjects
+
+    def download_all_files(self):
+        subject, username, password = self.get_credentials()
+        # If subject is empty, fetch all the subject names
+        if not subject:
+            subjects = list(self.fetch_subjects(username, password))
+            if subjects:
+                app = App(self.root, subject_var=subjects, callable_func=lambda: self.download_files_for_subject(app.get_subject(), 
+                                                username, password, lambda clear_inputs: self.on_download_complete(clear_inputs, app)))
+                app.start()
+                print(self.clear_inputs)
+                if self.clear_inputs:
+                    app.on_closing()
+            else:
+                messagebox.showinfo("Info", "No subjects found")
+            return
+        # If subject is not empty, download the files for the subject
+        self.download_files_for_subject(subject, username, password, self.on_download_complete)
+
+    def download_files_for_subject(self, subject, username, password, callback=None):
+        driver = self.initialize_and_login(username, password, self.selected_university)
+        if driver is None:
+            return
 
         try:
             subject_downloader(driver, subject)
 
         # Very common exception needs something else
         except NoSuchElementException:
-            
+            # Not enrolled, enroll and then download the files
             # Clicking Εγγραφη σε μάθημα
-            scraped_element_action(driver, "link_text",
-                "Εγγραφή σε μάθημα", "click")
+            scraped_element_action(driver, "link_text", "Εγγραφή σε μάθημα", "click")
 
             # Clicking Προπτυχιακό
             scraped_element_action(driver, "link_text", "Προπτυχιακό", "click")
 
-            #Clicking the subject
-            scraped_element_action(
-                driver, "link_text", subject, "click")
-            scraped_element_action(
-                driver, "xpath", '//*[@id="passwordModal"]/span[2]', "click")
-            
+            # Clicking the subject
+            scraped_element_action(driver, "link_text", subject, "click")
+            scraped_element_action(driver, "xpath", '//*[@id="passwordModal"]/span[2]', "click")
+                
             # Clicking Χαρτοφυλάκιο
-            scraped_element_action(
-                driver, "xpath", '//*[@id="main-content"]/div/div/div[1]/nav/ol/li[1]/a', "click")
-            
-            # Downloading the files as usual
+            scraped_element_action(driver, "xpath", '//*[@id="main-content"]/div/div/div[1]/nav/ol/li[1]/a', "click")
+                
+            # Downloading the files
             subject_downloader(driver, subject)
             
         # Disconnect from eclass
-        scraped_element_action(
-            driver, "xpath", '//*[@id="dropdownMenu1"]', "click")
-        scraped_element_action(
-            driver, "xpath", '//*[@id="profile_menu_dropdown"]/ul/li[9]', "click")
-        
-        root = tk.Tk()
-        root.withdraw()
-        clear_inputs = messagebox.askyesno(
-            "Clear Inputs", "Do you want to erase all the input data?") 
-        if clear_inputs:
-            self.subjectInput.delete(0, tk.END)
-            self.usernameInput.delete(0, tk.END)
-            self.passwordInput.delete(0, tk.END)
-        
+        self.disconnect_from_eclass(driver)
         driver.quit()
+        self.clear_inputs = messagebox.askyesno("Clear Inputs", "Do you want to erase all the input data?")
+        if callback:
+            callback(self.clear_inputs)
 
-def get_one_before_latest_chromedriver_version():
-    url = "https://chromedriver.chromium.org/downloads"
-    soup = BeautifulSoup(requests.get(url).content, "html.parser")
+    def on_download_complete(self, clear_inputs, app=None):
+        self.clear_inputs = clear_inputs
+        if self.clear_inputs:
+            self.clear_input_fields(self.subjectInput, self.usernameInput, self.passwordInput)
+            if app:
+                app.on_closing()
 
-    versions = []
-    for a in soup.select("a[href^='https://chromedriver.storage.googleapis.com/index.html?path=']"):
-        version = a['href'].split('=')[1]
-        # Remove trailing slash if it exists
-        version = version.rstrip('/')
-        versions.append(version)
-
-    versions.sort(key=lambda s: list(map(int, s.split('.'))))
-
-    # Return one before the latest version
-    return versions[-1]
 
 def scraped_element_action(driver, TYPE, value_var, action, send_keys_value="", time_to_wait=0.5):
     scraped_element = None
@@ -251,10 +270,6 @@ def subject_downloader(driver, subject):
     time_to_download = end_time - start_time
     sleep_time(time_to_download)
 
-
-
 if __name__ == '__main__':
-    obj = EclassAllFileDownloader()
-    obj.mainloop()
-
-
+    app = EclassAllFileDownloader()
+    app.start()
