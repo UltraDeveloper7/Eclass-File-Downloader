@@ -2,7 +2,6 @@ import customtkinter as ctk
 
 ctk.set_default_color_theme("blue")
 
-
 class App:
 
     APP_NAME = "Select Subject"
@@ -18,8 +17,9 @@ class App:
         self.top.lift()
         self.top.grab_set()
         self.top.title(App.APP_NAME)
-        self.top.geometry(str(App.WIDTH) + "x" + str(App.HEIGHT))
+        self.top.geometry(f"{App.WIDTH}x{App.HEIGHT}+800+300")
         self.top.minsize(App.WIDTH, App.HEIGHT)
+        self.top.resizable(False, False)
 
         self.label = ctk.CTkLabel(self.top, text="Select a subject:")
         self.label.place(relx=0.06, rely=0.2)
