@@ -4,6 +4,7 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Prerequisites](#prerequisites)
+- [Requirements](#requirements)
 - [Installation](#installation)
 - [How to Run](#how-to-run)
 - [Disclaimer](#disclaimer)
@@ -22,6 +23,11 @@ Subject Folder Download: Users can easily download subject folders for the cours
 Before using the Greek University Course Scraper, ensure that you meet the following prerequisites:
 1. University Membership: You must be a member of the Greek university from which you want to download course materials.
 2. Active Account: Ensure that your university account is active and can be used to log in to the university's online platform.
+
+## Requirements
+
+In order for the pr
+
 
 ## Installation
 Follow these steps to use the Greek University Course Scraper:
