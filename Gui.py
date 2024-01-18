@@ -221,12 +221,12 @@ class EclassAllFileDownloader(ctk.CTk):
             # Downloading the files
             subject_downloader(driver, subject)
             
-        # Disconnect from eclass
-        self.disconnect_from_eclass(driver)
-        driver.quit()
-        self.clear_inputs = messagebox.askyesno("Clear Inputs", "Do you want to erase all the input data?")
-        if callback:
-            callback(self.clear_inputs)
+            # Disconnect from eclass
+            self.disconnect_from_eclass(driver)
+            driver.quit()
+            self.clear_inputs = messagebox.askyesno("Clear Inputs", "Do you want to erase all the input data?")
+            if callback:
+                callback(self.clear_inputs)
 
     def on_download_complete(self, clear_inputs, app=None):
         self.clear_inputs = clear_inputs
