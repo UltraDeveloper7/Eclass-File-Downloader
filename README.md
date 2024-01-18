@@ -25,9 +25,11 @@ Before using the Greek University Course Scraper, ensure that you meet the follo
 2. Active Account: Ensure that your university account is active and can be used to log in to the university's online platform.
 
 ## Requirements
-
-In order for the pr
-
+In order to run the application make sure that all the module libraries that are being included in the requirements.txt are being installed on your system. 
+You can download all the required libraries by opening a terminal and typing the following command:
+```bash
+pip install -r requirements.txt
+```
 
 ## Installation
 Follow these steps to use the Greek University Course Scraper:
