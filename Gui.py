@@ -1,4 +1,8 @@
 import time
+import os
+import getpass
+import glob
+import threading
 import customtkinter as ctk
 from tkinter import messagebox
 from selenium import webdriver
@@ -25,7 +29,7 @@ def get_university_names(universities):
 
 university_names = get_university_names(universities)
 
-class EclassAllFileDownloader(ctk.CTk):
+class EclassAllFileDownloader():
 
     WIDTH = 480
     HEIGHT = 360
@@ -36,7 +40,7 @@ class EclassAllFileDownloader(ctk.CTk):
         self.clear_inputs = None
         self.root = ctk.CTk()
         self.root.iconbitmap("images/logo.ico")
-        self.root.title("Eclass All File Downloader")
+        self.root.title("Eclass Course Folder Downloader")
         self.root.geometry(
             f"{EclassAllFileDownloader.WIDTH}x{EclassAllFileDownloader.HEIGHT}+800+300")
         self.root.resizable(False,False)
@@ -97,8 +101,6 @@ class EclassAllFileDownloader(ctk.CTk):
         self.root.bind("<Command-q>", self.on_closing)
         self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
         
-        self.var = 0
-        
     def toggle_show_password(self):
         self.var += 1
         if self.var % 2:
@@ -109,16 +111,10 @@ class EclassAllFileDownloader(ctk.CTk):
     def get_url(self, selected_university):
         self.selected_university = universities[selected_university]
         return self.selected_university
-        
-    def change_appearance_mode(self, new_appearance_mode):
-        ctk.set_appearance_mode(new_appearance_mode)
 
-    def start(self, event=None):
-        self.root.mainloop()
-
-    def on_closing(self, event=0):
-        self.root.destroy()
-
+################################################################################################################
+####################################### Methods for handling the program #######################################
+################################################################################################################
     def get_credentials(self):
         subject = self.subjectInput.get().strip()
         username = self.usernameInput.get().replace(" ", "")
@@ -152,7 +148,6 @@ class EclassAllFileDownloader(ctk.CTk):
         scraped_element_action(driver, "xpath", '//*[@id="dropdownMenu1"]', "click")
         scraped_element_action(driver, "xpath", '//*[@id="profile_menu_dropdown"]/ul/li[9]', "click")
 
-
     def clear_input_fields(self, subjectInput, usernameInput, passwordInput):
         subjectInput.delete(0, ctk.END)
         usernameInput.delete(0, ctk.END)
@@ -170,8 +165,7 @@ class EclassAllFileDownloader(ctk.CTk):
         subjects = [element.text for element in driver.find_elements(By.XPATH, '//table/tbody/tr/td[1]/strong/a')]
 
         # Disconnect from eclass
-        self.disconnect_from_eclass(driver)
-
+        self.disconnect_from_eclass(driver)       
         driver.quit()
 
         return subjects
@@ -185,7 +179,6 @@ class EclassAllFileDownloader(ctk.CTk):
                 app = App(self.root, subject_var=subjects, callable_func=lambda: self.download_files_for_subject(app.get_subject(), 
                                                 username, password, lambda clear_inputs: self.on_download_complete(clear_inputs, app)))
                 app.start()
-                print(self.clear_inputs)
                 if self.clear_inputs:
                     app.on_closing()
             else:
@@ -198,9 +191,15 @@ class EclassAllFileDownloader(ctk.CTk):
         driver = self.initialize_and_login(username, password, self.selected_university)
         if driver is None:
             return
+        
+        download_complete_event = threading.Event()  # Create an Event object
 
         try:
-            subject_downloader(driver, subject)
+            # Downloading the files
+            download_thread = threading.Thread(target=subject_downloader, args=(driver, subject, download_complete_event))
+            download_thread.start()
+            download_complete_event.wait()  # Wait for the download to finish
+            download_thread.join()
 
         # Very common exception needs something else
         except NoSuchElementException:
@@ -219,10 +218,15 @@ class EclassAllFileDownloader(ctk.CTk):
             scraped_element_action(driver, "xpath", '//*[@id="main-content"]/div/div/div[1]/nav/ol/li[1]/a', "click")
                 
             # Downloading the files
-            subject_downloader(driver, subject)
-            
+            download_thread = threading.Thread(target=subject_downloader, args=(driver, subject, download_complete_event))
+            download_thread.start()
+            download_complete_event.wait()  # Wait for the download to finish
+            download_thread.join()
+        
         # Disconnect from eclass
-        self.disconnect_from_eclass(driver)
+        disconnect_thread = threading.Thread(target=self.disconnect_from_eclass, args=(driver,))
+        disconnect_thread.start()
+        disconnect_thread.join()  # Wait for the disconnect to finish
         driver.quit()
         self.clear_inputs = messagebox.askyesno("Clear Inputs", "Do you want to erase all the input data?")
         if callback:
@@ -234,8 +238,50 @@ class EclassAllFileDownloader(ctk.CTk):
             self.clear_input_fields(self.subjectInput, self.usernameInput, self.passwordInput)
             if app:
                 app.on_closing()
+                
+                
+############################ Methods for changing the theme and opening/closing the application
+    def change_appearance_mode(self, new_appearance_mode):
+        ctk.set_appearance_mode(new_appearance_mode)
 
+    def start(self, event=None):
+        self.root.mainloop()
 
+    def on_closing(self, event=0):
+        if self.root.winfo_exists():  # Check if the window still exists
+            self.root.destroy()         
+                
+                
+def get_download_path():
+    if os.name == 'nt':  # For Windows
+        download_path = os.path.join(os.path.expanduser("~"), "Downloads")
+    else:  # For Unix-based systems
+        download_path = os.path.join("/home", getpass.getuser(), "Downloads")
+    return download_path
+
+def wait_for_latest_file(download_path, download_complete_event):
+    try:
+        while True:
+            list_of_files = glob.glob(download_path + '/*')
+            if not list_of_files:
+                time.sleep(1)
+                continue
+            latest_file = max(list_of_files, key=os.path.getctime)
+            if os.path.splitext(latest_file)[1] not in ['.crdownload', '.part']:
+                if not os.path.exists(latest_file):  # Check if the file exists
+                    continue
+                old_file_size = os.path.getsize(latest_file)
+                time.sleep(1)
+                if not os.path.exists(latest_file):  # Check if the file exists
+                    continue
+                new_file_size = os.path.getsize(latest_file)
+                if old_file_size == new_file_size:  # If the file size has stopped increasing
+                    break
+    except Exception as e:
+        print(f"An error occurred while waiting for the file to download: {e}")
+    finally:
+        download_complete_event.set()  # Signal that the download is complete
+        
 def scraped_element_action(driver, TYPE, value_var, action, send_keys_value="", time_to_wait=0.5):
     scraped_element = None
     if TYPE == "xpath":
@@ -253,23 +299,24 @@ def scraped_element_action(driver, TYPE, value_var, action, send_keys_value="", 
         driver.implicitly_wait(time_to_wait)
     else:
         print(f"No element found with {TYPE} = {value_var}")
-
-def sleep_time(duration):
-    time.sleep(duration)
     
-def subject_downloader(driver, subject):
+def subject_downloader(driver, subject, download_complete_event):
+    download_path = get_download_path()
     scraped_element_action(driver, "xpath", '//*[@id = "portfolio_lessons_wrapper"]/div[1]/a', "click")
     scraped_element_action(driver, "link_text", subject, "click")
     scraped_element_action(
         driver, "xpath", '//*[@id="header"]/button/span[1]', "click")
     scraped_element_action(driver, "link_text",'Έγγραφα', "click", time_to_wait=1)
-    start_time = time.time()
     scraped_element_action(driver, "xpath", 
         '//*[@id="main-content"]/div/div/div[3]/div/div/div/div/a[2]/span', "click")
-    end_time = time.time()
-    time_to_download = end_time - start_time
-    sleep_time(time_to_download+0.5)
+    # Start a new thread to wait for the download to complete
+    download_wait_thread = threading.Thread(target=wait_for_latest_file, args=(download_path, download_complete_event))
+    download_wait_thread.start()
+    download_wait_thread.join()  # Wait for the download to complete
 
 if __name__ == '__main__':
     app = EclassAllFileDownloader()
     app.start()
+
+
+
