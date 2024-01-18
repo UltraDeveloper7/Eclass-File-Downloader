@@ -1,4 +1,5 @@
 # Greek University Course Scraper
+![Greek University Course Scraper](https://github.com/UltraDeveloper7/Eclass-File-Downloader/assets/75303541/63a5347c-8795-4b5e-857f-0f7d4dfe09e0)
 
 ## Table of Contents
 - [Overview](#overview)
