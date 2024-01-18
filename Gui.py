@@ -221,12 +221,12 @@ class EclassAllFileDownloader(ctk.CTk):
             # Downloading the files
             subject_downloader(driver, subject)
             
-            # Disconnect from eclass
-            self.disconnect_from_eclass(driver)
-            driver.quit()
-            self.clear_inputs = messagebox.askyesno("Clear Inputs", "Do you want to erase all the input data?")
-            if callback:
-                callback(self.clear_inputs)
+        # Disconnect from eclass
+        self.disconnect_from_eclass(driver)
+        driver.quit()
+        self.clear_inputs = messagebox.askyesno("Clear Inputs", "Do you want to erase all the input data?")
+        if callback:
+            callback(self.clear_inputs)
 
     def on_download_complete(self, clear_inputs, app=None):
         self.clear_inputs = clear_inputs
@@ -268,7 +268,7 @@ def subject_downloader(driver, subject):
         '//*[@id="main-content"]/div/div/div[3]/div/div/div/div/a[2]/span', "click")
     end_time = time.time()
     time_to_download = end_time - start_time
-    sleep_time(time_to_download)
+    sleep_time(time_to_download+0.5)
 
 if __name__ == '__main__':
     app = EclassAllFileDownloader()
