@@ -36,7 +36,7 @@ class EclassAllFileDownloader():
         self.selected_university = universities["University of Patras"]
         self.clear_inputs = None
         self.root = ctk.CTk()
-        self.root.iconbitmap("images/logo.ico")
+        self.root.iconbitmap("images/eclass.ico")
         self.root.title("Eclass Course Folder Downloader")
         self.root.geometry(
             f"{EclassAllFileDownloader.WIDTH}x{EclassAllFileDownloader.HEIGHT}+800+300")
